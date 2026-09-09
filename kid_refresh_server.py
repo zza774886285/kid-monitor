@@ -876,8 +876,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     "cache_age": round(_time.time() - _cache.get("ts", 0), 1), "day_type": _get_day_type()})
                 return
             if self.path == "/api/bypass":
-                mac = body.get("mac")
-                bypass = body.get("bypass")
+                self._json(200, {"ok": True, "msg": "use POST"})
+                return
                 if not mac or bypass is None:
                     self._json(400, {"ok": False, "error": "mac and bypass required"}); return
                 config_file = os.path.expanduser("~/.config/kid-control/config.json")
