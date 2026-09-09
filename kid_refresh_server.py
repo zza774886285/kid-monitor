@@ -212,6 +212,7 @@ def _collect_data():
         "state": state,
         "day_type": _get_day_type(),
         "tablets": tablets,
+        "bypass": config.get("bypass", {}),
     }
 
 # ============ 定时采集线程 ============
@@ -746,10 +747,11 @@ function render(d){
       <div class="rt-row"><span class="label">TCP/UDP</span><span class="value">${tcpKb.toLocaleString()}/${udpKb.toLocaleString()}</span></div>
       <div class="rt-row"><span class="label">连接数</span><span class="value">T${rt.tcp_conns||0}/U${rt.udp_conns||0}</span></div>
       <div class="rt-row"><span class="label">今日</span><span class="value" style="font-weight:600">${fmt(usage)}</span></div>
-      <div class="rt-row"><span class="label">剩余</span><span class="value remain-val" data-mac="${mac}" style="color:#30d158;font-weight:600">${fmt(Math.max(0,limit-usage))}</span></div>
+      <div class="rt-row"><span class="label">剩余</span><span class="value remain-val" data-mac="${mac}" style="color:#30d158;font-weight:600">${fmt(Math.max(0,limit-usage))}</span> ${(d.bypass||{})[mac]?.enabled ? '<span class="bypass-badge on">🟢 放行中</span>' : '<span class="bypass-badge off">正常管控</span>'}</div>
       <div style="margin-top:8px;display:flex;gap:6px">
         <button class="btn" onclick="doAdjust('${mac}',-1800)">➖30m</button>
         <button class="btn" onclick="doAdjust('${mac}',1800)">➕30m</button>
+        <button class="btn-bypass ${(d.bypass||{})[mac]?.enabled?'on':'off'}" onclick="doToggleBypass('${mac}',${!((d.bypass||{})[mac]?.enabled)})">${(d.bypass||{})[mac]?.enabled?'🔒 恢复限制':'🔓 临时放行'}</button>
       </div>
     </div>`;
   }
@@ -816,7 +818,12 @@ async function doAdjust(mac,delta){
     const j=await r.json();if(j.ok){const el=document.querySelector(`[data-mac="${mac}"] .remain-val`);if(el)el.textContent=fmt(j.remaining_sec);fetch("/kid-refresh").catch(()=>{});setTimeout(load,3000)}else alert("❌ "+j.error);
   }catch(e){alert("❌ 网络错误")}
 }
-const PLATFORM_NAMES={bilibili:"B站",douyin:"抖音",iqiyi:"爱奇艺",youku:"优酷",tencent_video:"腾讯视频",mango:"芒果",kuaishou:"快手",xiaohongshu:"小红书",acfun:"AcFun",unknown:"未知"};
+async function doToggleBypass(mac,enabled){
+  try{const r=await fetch("/api/bypass",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mac,bypass:enabled})});
+    const j=await r.json();if(j.ok){fetch("/kid-refresh").catch(()=>{});setTimeout(load,1000)}else alert("❌ "+j.error);
+  }catch(e){alert("❌ 网络错误")}
+}
+const PLATFORM_NAMES=bilibili:"B站",douyin:"抖音",iqiyi:"爱奇艺",youku:"优酷",tencent_video:"腾讯视频",mango:"芒果",kuaishou:"快手",xiaohongshu:"小红书",acfun:"AcFun",unknown:"未知"};
 function fmtShort(s,e){const a=new Date(s),b=new Date(e);return `${a.getHours().toString().padStart(2,'0')}:${a.getMinutes().toString().padStart(2,'0')}~${b.getHours().toString().padStart(2,'0')}:${b.getMinutes().toString().padStart(2,'0')}`}
 function platformDisplay(p){if(!p||p=="unknown")return "未知";return p.split(",").map(x=>PLATFORM_NAMES[x]||x).join("+")}
 async function loadVideoSessions(){
@@ -867,6 +874,33 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if self.path == "/health":
                 self._json(200, {"ok": True, "last_collect": db.get_last_collect_time(),
                     "cache_age": round(_time.time() - _cache.get("ts", 0), 1), "day_type": _get_day_type()})
+                return
+            if self.path == "/api/bypass":
+                mac = body.get("mac")
+                bypass = body.get("bypass")
+                if not mac or bypass is None:
+                    self._json(400, {"ok": False, "error": "mac and bypass required"}); return
+                config_file = os.path.expanduser("~/.config/kid-control/config.json")
+                config = {}
+                try:
+                    with open(config_file) as f: config = json.load(f)
+                except: pass
+                if bypass:
+                    config.setdefault("bypass", {})[mac.upper()] = {"enabled": True, "set_at": datetime.now(CST).strftime("%Y-%m-%d %H:%M:%S")}
+                    config.setdefault("limits", {}).setdefault(mac.upper(), {})
+                    config["limits"][mac.upper()][datetime.now(CST).strftime("%Y-%m-%d")] = 86400
+                else:
+                    config.get("bypass", {}).pop(mac.upper(), None)
+                    default_limit = 3600
+                    try:
+                        default_limit = int(cfg_get("DEFAULT_LIMIT", "60")) * 60
+                    except: pass
+                    config.setdefault("limits", {}).setdefault(mac.upper(), {})
+                    config["limits"][mac.upper()][datetime.now(CST).strftime("%Y-%m-%d")] = default_limit
+                os.makedirs(os.path.dirname(config_file), exist_ok=True)
+                with open(config_file, "w") as f: json.dump(config, f, indent=2)
+                with _cache_lock: _cache["ts"] = 0; _cache["data"] = None
+                self._json(200, {"ok": True, "mac": mac, "bypass": bypass})
                 return
             if self.path == "/api/config":
                 cfg = _load_monitor_config()
