@@ -1,0 +1,70 @@
+{
+  "VIDEO": [
+    "bilibili.com", "bilibili.tv",
+    "douyin.com", "douyinliving.com",
+    "ixigua.com", "snssdk.com", "amemv.com",
+    "iqiyi.com", "iqiyi.cn",
+    "youku.com", "youku.tv",
+    "qq.com/video", "v.qq.com",
+    "mgtv.com",
+    "tudou.com",
+    "le.com", "letv.com",
+    "sohu.com/video",
+    "acfun.cn",
+    "xiaohongshu.com", "xhscdn.com"
+  ],
+  "VIDEO_CDN": [
+    "bilivideo.com", "bstatic.com", "bilibili.cc",
+    "douyincdn.com", "douyinpic.com", "bytedance.com", "byteimg.com",
+    "ixigua.com", "bytecdn.cn",
+    "gtimg.com", "qpic.cn",
+    "alicdn.com/video",
+    "cdn-douyin.com",
+    "pull-*.douyincdn.com",
+    "*.bilivideo.com",
+    "*.bytecdn.cn",
+    "*.gtimg.com"
+  ],
+  "GAME": [
+    "netease.com", "netease.cloud",
+    "mihoyo.com", "hoyoverse.com", "miyoushe.com",
+    "hypergryph.com",
+    "pubg.com",
+    "steam.com", "steampowered.com", "steamcommunity.com",
+    "epicgames.com",
+    "party.animals",
+    "lol.qq.com", "pvp.qq.com",
+    "gameyw.netease.com",
+    "gph.netease.com",
+    "proxima.nie.netease.com",
+    "egg.netease.com"
+  ],
+  "GAME_CDN": [
+    "*.static-http.nosdn.127.net",
+    "*.dl.gtag.netease.com",
+    "*.cdn-*.mihoyo.com",
+    "*.secure-static.hoyoverse.com"
+  ],
+  "AD": [
+    "doubleclick.net", "googlesyndication.com",
+    "adsmind.ugdtimg.com",
+    "pgdt.gtimg.cn",
+    "ad.qcloud.com",
+    "mi-img.com/ad",
+    "ad.xiaomi.com"
+  ],
+  "UPDATE": [
+    "play.google.com", "dl.google.com",
+    "apple.com/itunes",
+    "appgallery.huawei.com",
+    "app.mi.com",
+    "alilogs.com",
+    "otlp-http-*.volces.com"
+  ],
+  "SOCIAL": [
+    "weixin.qq.com", "weibo.com", "sinaimg.cn",
+    "taobao.com", "tmall.com", "jd.com",
+    "pinduoduo.com"
+  ],
+  "OTHER": []
+}

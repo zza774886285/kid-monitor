@@ -1,0 +1,10 @@
+services:
+  kid-monitor:
+    build: .
+    container_name: kid-monitor
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./data:/app/data
+    environment:
+      - TZ=Asia/Shanghai

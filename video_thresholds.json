@@ -1,0 +1,23 @@
+{
+  "traffic_thresholds_mb": {
+    "weak": 10,
+    "suspect": 30,
+    "medium": 60,
+    "strong": 150
+  },
+  "score_dns": {
+    "video_hit": 30,
+    "video_cdn_hit": 40,
+    "multi_domain_bonus": 10
+  },
+  "score_traffic": {
+    "weak": 10,
+    "suspect": 20,
+    "medium": 30,
+    "strong": 40
+  },
+  "score_continuity": 10,
+  "score_max": 100,
+  "session_gap_tolerance": 2,
+  "collection_interval_sec": 300
+}
