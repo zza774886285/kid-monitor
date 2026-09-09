@@ -823,7 +823,7 @@ async function doToggleBypass(mac,enabled){
     const j=await r.json();if(j.ok){fetch("/kid-refresh").catch(()=>{});setTimeout(load,1000)}else alert("❌ "+j.error);
   }catch(e){alert("❌ 网络错误")}
 }
-const PLATFORM_NAMES=bilibili:"B站",douyin:"抖音",iqiyi:"爱奇艺",youku:"优酷",tencent_video:"腾讯视频",mango:"芒果",kuaishou:"快手",xiaohongshu:"小红书",acfun:"AcFun",unknown:"未知"};
+const PLATFORM_NAMES={bilibili:"B站",douyin:"抖音",iqiyi:"爱奇艺",youku:"优酷",tencent_video:"腾讯视频",mango:"芒果",kuaishou:"快手",xiaohongshu:"小红书",acfun:"AcFun",unknown:"未知"};
 function fmtShort(s,e){const a=new Date(s),b=new Date(e);return `${a.getHours().toString().padStart(2,'0')}:${a.getMinutes().toString().padStart(2,'0')}~${b.getHours().toString().padStart(2,'0')}:${b.getMinutes().toString().padStart(2,'0')}`}
 function platformDisplay(p){if(!p||p=="unknown")return "未知";return p.split(",").map(x=>PLATFORM_NAMES[x]||x).join("+")}
 async function loadVideoSessions(){
