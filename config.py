@@ -4,11 +4,11 @@ import db
 
 # 默认值
 DEFAULTS = {
-    "ROS_HOST": "10.1.1.250",
+    "ROS_HOST": "",
     "ROS_PORT": "8022",
-    "ROS_USER": "kirin",
-    "ROS_PASS": "890405",
-    "MOSDNS_API": "http://10.1.1.140:1053/api/v1/query/audit",
+    "ROS_USER": "",
+    "ROS_PASS": "",
+    "MOSDNS_API": "",
     "TABLETS": "{}",
     "KID_PROFILES": "{}",
     "SERVER_URL": "http://localhost:18089",
