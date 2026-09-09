@@ -212,7 +212,7 @@ def _collect_data():
         "state": state,
         "day_type": _get_day_type(),
         "tablets": tablets,
-        "bypass": config.get("bypass", {}),
+        "switch": config.get("switch", {}),
     }
 
 # ============ 定时采集线程 ============
@@ -559,6 +559,9 @@ tr:hover td{background:var(--tr-hover)}
 .tag-active{background:var(--tag-active-bg);color:var(--tag-active-c)}
 .tag-idle{background:var(--tag-idle-bg);color:var(--tag-idle-c)}
 .tag-blocked{background:var(--tag-blocked-bg);color:var(--tag-blocked-c)}
+.btn-switch{border:2px solid #666;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s}
+.btn-switch.on{background:#0a0;border-color:#0a0;color:#fff}
+.btn-switch.off{background:#c00;border-color:#c00;color:#fff}
 .bar-wrap{background:var(--bar-bg);border-radius:4px;height:18px;position:relative;min-width:100px;overflow:hidden}
 .bar{height:100%;border-radius:4px;transition:width 0.3s}
 .bar-ok{background:linear-gradient(90deg,#30d158,#34c759)}
@@ -747,11 +750,12 @@ function render(d){
       <div class="rt-row"><span class="label">TCP/UDP</span><span class="value">${tcpKb.toLocaleString()}/${udpKb.toLocaleString()}</span></div>
       <div class="rt-row"><span class="label">连接数</span><span class="value">T${rt.tcp_conns||0}/U${rt.udp_conns||0}</span></div>
       <div class="rt-row"><span class="label">今日</span><span class="value" style="font-weight:600">${fmt(usage)}</span></div>
-      <div class="rt-row"><span class="label">剩余</span><span class="value remain-val" data-mac="${mac}" style="color:#30d158;font-weight:600">${fmt(Math.max(0,limit-usage))}</span> ${(d.bypass||{})[mac]?.enabled ? '<span class="bypass-badge on">🟢 放行中</span>' : '<span class="bypass-badge off">正常管控</span>'}</div>
-      <div style="margin-top:8px;display:flex;gap:6px">
+      <div class="rt-row"><span class="label">剩余</span><span class="value remain-val" data-mac="${mac}" style="color:#30d158;font-weight:600">${fmt(Math.max(0,limit-usage))}</span></div>
+      <div style="margin-top:8px;display:flex;gap:6px;align-items:center">
         <button class="btn" onclick="doAdjust('${mac}',-1800)">➖30m</button>
         <button class="btn" onclick="doAdjust('${mac}',1800)">➕30m</button>
-        <button class="btn-bypass ${(d.bypass||{})[mac]?.enabled?'on':'off'}" onclick="doToggleBypass('${mac}',${!((d.bypass||{})[mac]?.enabled)})">${(d.bypass||{})[mac]?.enabled?'🔒 恢复限制':'🔓 临时放行'}</button>
+        <span style="margin-left:8px;font-size:12px;color:var(--text2)">开关:</span>
+        <button class="btn-switch ${(d.switch||{})[mac]?.enabled===false?'off':'on'}" onclick="doToggleSwitch('${mac}',${(d.switch||{})[mac]?.enabled!==false?false:true})">${(d.switch||{})[mac]?.enabled===false?'🔴 已关闭':'🟢 已开启'}</button>
       </div>
     </div>`;
   }
@@ -818,8 +822,8 @@ async function doAdjust(mac,delta){
     const j=await r.json();if(j.ok){const el=document.querySelector(`[data-mac="${mac}"] .remain-val`);if(el)el.textContent=fmt(j.remaining_sec);fetch("/kid-refresh").catch(()=>{});setTimeout(load,3000)}else alert("❌ "+j.error);
   }catch(e){alert("❌ 网络错误")}
 }
-async function doToggleBypass(mac,enabled){
-  try{const r=await fetch("/api/bypass",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mac,bypass:enabled})});
+async function doToggleSwitch(mac,enabled){
+  try{const r=await fetch("/api/switch",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mac,enabled})});
     const j=await r.json();if(j.ok){fetch("/kid-refresh").catch(()=>{});setTimeout(load,1000)}else alert("❌ "+j.error);
   }catch(e){alert("❌ 网络错误")}
 }
@@ -875,32 +879,15 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 self._json(200, {"ok": True, "last_collect": db.get_last_collect_time(),
                     "cache_age": round(_time.time() - _cache.get("ts", 0), 1), "day_type": _get_day_type()})
                 return
-            if self.path == "/api/bypass":
-                self._json(200, {"ok": True, "msg": "use POST"})
-                return
-                if not mac or bypass is None:
-                    self._json(400, {"ok": False, "error": "mac and bypass required"}); return
+            if self.path == "/api/switch":
+                # 返回所有平板的开关状态
                 config_file = os.path.expanduser("~/.config/kid-control/config.json")
                 config = {}
                 try:
                     with open(config_file) as f: config = json.load(f)
                 except: pass
-                if bypass:
-                    config.setdefault("bypass", {})[mac.upper()] = {"enabled": True, "set_at": datetime.now(CST).strftime("%Y-%m-%d %H:%M:%S")}
-                    config.setdefault("limits", {}).setdefault(mac.upper(), {})
-                    config["limits"][mac.upper()][datetime.now(CST).strftime("%Y-%m-%d")] = 86400
-                else:
-                    config.get("bypass", {}).pop(mac.upper(), None)
-                    default_limit = 3600
-                    try:
-                        default_limit = int(cfg_get("DEFAULT_LIMIT", "60")) * 60
-                    except: pass
-                    config.setdefault("limits", {}).setdefault(mac.upper(), {})
-                    config["limits"][mac.upper()][datetime.now(CST).strftime("%Y-%m-%d")] = default_limit
-                os.makedirs(os.path.dirname(config_file), exist_ok=True)
-                with open(config_file, "w") as f: json.dump(config, f, indent=2)
-                with _cache_lock: _cache["ts"] = 0; _cache["data"] = None
-                self._json(200, {"ok": True, "mac": mac, "bypass": bypass})
+                switch_state = config.get("switch", {})
+                self._json(200, {"ok": True, "switch": switch_state})
                 return
             if self.path == "/api/config":
                 cfg = _load_monitor_config()
@@ -962,6 +949,25 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 except: pass
                 with _cache_lock: _cache["ts"] = 0; _cache["data"] = None
                 self._json(200, {"ok": True, "mac": mac, "limit_sec": new_limit, "usage_sec": usage, "remaining_sec": max(0, new_limit - usage)})
+                return
+            if self.path == "/api/switch":
+                mac = body.get("mac")
+                enabled = body.get("enabled")
+                if not mac or enabled is None:
+                    self._json(400, {"ok": False, "error": "mac and enabled required"}); return
+                config_file = os.path.expanduser("~/.config/kid-control/config.json")
+                config = {}
+                try:
+                    with open(config_file) as f: config = json.load(f)
+                except: pass
+                config.setdefault("switch", {})[mac.upper()] = {
+                    "enabled": bool(enabled),
+                    "set_at": datetime.now(CST).strftime("%Y-%m-%d %H:%M:%S")
+                }
+                os.makedirs(os.path.dirname(config_file), exist_ok=True)
+                with open(config_file, "w") as f: json.dump(config, f, indent=2)
+                with _cache_lock: _cache["ts"] = 0; _cache["data"] = None
+                self._json(200, {"ok": True, "mac": mac, "enabled": enabled, "msg": f"{'开启' if enabled else '关闭'}上网"})
                 return
             if self.path == "/api/config":
                 vacation = body.get("vacation_mode")
