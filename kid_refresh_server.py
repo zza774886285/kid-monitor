@@ -211,6 +211,7 @@ def _collect_data():
         "history": records[-200:] if records else [],
         "state": state,
         "day_type": _get_day_type(),
+        "tablets": tablets,
     }
 
 # ============ 定时采集线程 ============
@@ -727,6 +728,7 @@ async function load(){
 }
 function render(d){
   document.getElementById("updateTime").textContent="更新: "+d.generated_at;
+  if(d.tablets)Object.assign(TABLETS,d.tablets);
   updateDayBadge(d.day_type);
   let rh="";
   for(const[mac,info]of Object.entries(TABLETS)){
